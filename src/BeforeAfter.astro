@@ -1,0 +1,110 @@
+---
+/**
+ * BeforeAfter.astro
+ * -----------------
+ *
+ * Image-comparison slider. Mouse / touch / pen all flow through
+ * `pointer*` events. Keyboard-accessible — focus the handle and
+ * use ← / → to step the divider in 5% increments.
+ *
+ * Common uses: design before/after, photo retouch, dark/light mode
+ * preview, plugin chain audio waveform comparisons, UI redesigns.
+ *
+ * ## DOM contract
+ *
+ * The component renders a fixed structure the runtime queries:
+ *
+ *   <div data-before-after data-start="50">
+ *     <img class="before-after-img before-after-img--before" />
+ *     <img class="before-after-img before-after-img--after" />
+ *     <span class="before-after-label before-after-label--before">…</span>
+ *     <span class="before-after-label before-after-label--after">…</span>
+ *     <button data-before-after-handle>
+ *       <span class="before-after-handle-grip"></span>
+ *     </button>
+ *   </div>
+ *
+ * Bring your own CSS (or import the canonical one from
+ * `@arraypress/before-after-astro/style.css`). The runtime drives
+ * the active state via the `is-dragging` class on the viewer and
+ * inline `clip-path` + `left` on the inner elements.
+ *
+ * @example
+ *   <BeforeAfter
+ *     before="/img/raw.jpg"
+ *     after="/img/processed.jpg"
+ *     beforeLabel="Raw"
+ *     afterLabel="Processed"
+ *     aspectRatio="16 / 9"
+ *     startAt={50}
+ *   />
+ */
+
+import type { BeforeAfterProps } from './types';
+
+const {
+	before,
+	after,
+	beforeAlt = '',
+	afterAlt = '',
+	beforeLabel,
+	afterLabel,
+	aspectRatio = '16 / 9',
+	startAt = 50,
+	handleLabel = 'Drag to compare',
+	class: className,
+} = Astro.props as BeforeAfterProps;
+
+const clampedStart = Math.max(0, Math.min(100, startAt));
+const showLabels = Boolean(beforeLabel || afterLabel);
+---
+
+<div class:list={['before-after', className]}>
+	<div
+		class="before-after-viewer"
+		data-before-after
+		data-start={clampedStart}
+		style={`aspect-ratio: ${aspectRatio};`}
+	>
+		<img
+			class="before-after-img before-after-img--before"
+			src={before}
+			alt={beforeAlt}
+			loading="lazy"
+		/>
+		<img
+			class="before-after-img before-after-img--after"
+			src={after}
+			alt={afterAlt}
+			loading="lazy"
+			style={`clip-path: inset(0 ${100 - clampedStart}% 0 0);`}
+		/>
+		{showLabels && beforeLabel && (
+			<span class="before-after-label before-after-label--before">{beforeLabel}</span>
+		)}
+		{showLabels && afterLabel && (
+			<span class="before-after-label before-after-label--after">{afterLabel}</span>
+		)}
+		<button
+			type="button"
+			class="before-after-handle"
+			data-before-after-handle
+			role="slider"
+			aria-label={handleLabel}
+			aria-valuemin="0"
+			aria-valuemax="100"
+			aria-valuenow={clampedStart}
+			tabindex="0"
+			style={`left: ${clampedStart}%;`}
+		>
+			<span class="before-after-handle-grip" aria-hidden="true"></span>
+		</button>
+	</div>
+</div>
+
+<script>
+	import { initAllBeforeAfter } from '@arraypress/before-after-astro/runtime';
+
+	initAllBeforeAfter();
+	document.addEventListener('astro:after-swap', () => initAllBeforeAfter());
+</script>
